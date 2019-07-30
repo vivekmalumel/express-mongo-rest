@@ -5,7 +5,7 @@ const Product=require('../models/product')
 
 router.get('/',async (req,res)=>{
     try {
-        const result=await Order.find().select("_id product quantity");
+        const result=await Order.find().populate('product','name price').select("_id product quantity");
         const response={
             count:result.length,
             orders:result.map(doc=>{
@@ -65,7 +65,7 @@ router.post('/',async (req,res)=>{
 router.get('/:id',async (req,res)=>{
     const id=req.params.id;
     try {
-        const result=await Order.findById(id).select("_id quantity product");
+        const result=await Order.findById(id).populate('product','name price').select("_id quantity product");
         if(result)
         res.status(200).json(result);
         else
