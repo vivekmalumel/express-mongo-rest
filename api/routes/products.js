@@ -1,18 +1,47 @@
 const router=require('express').Router();
 const mongoose=require('mongoose');
 const Product=require('../models/product');
+const multer  = require('multer');
+const auth=require('../middlewares/auth');
+require('dotenv').config();
+const storage = multer.diskStorage({
+    destination: function (req, file, cb) {
+      cb(null, 'public/uploads')
+    },
+    filename: function (req, file, cb) {
+      cb(null, Date.now()+'-'+file.originalname)
+    }
+  })
+
+const fileFilter=(req,file,cb)=>{
+    if(file.mimetype==='image/jpeg' || file.mimetype==='image/png')
+        cb(null,true);
+    else
+        cb(null,false);
+}
+
+const upload = multer({
+    storage,
+    limits:{
+    fileSize:1024*1024*5
+    },
+    fileFilter
+})
+
+
 
 router.get('/',async(req,res)=>{
     try {
-        const result =await Product.find().select('_id name price');
+        const result =await Product.find().select('_id name price productImage');
         const response={
             count:result.length,
             products:result.map(doc=>{
-                const{_id,name,price}=doc;
+                const{_id,name,price,productImage}=doc;
                 return{
                     _id,
                     name,
                     price,
+                    productImage,
                     request:{type:'GET',url:"http://localhost:5000/api/products/"+_id}
                 }
             })
@@ -24,18 +53,20 @@ router.get('/',async(req,res)=>{
     }
 });
 
-router.post('/',async (req,res)=>{
+router.post('/',auth,upload.single('productImage'),async (req,res)=>{
+    //console.log(req.file);
     const product=new Product({
         _id:new mongoose.Types.ObjectId(),
         name:req.body.name,
-        price:req.body.price
+        price:req.body.price,
+        productImage:process.env.BASE_URL+'uploads/'+req.file.filename
     })
     try {
         const result=await product.save();
-        const {_id,name,price}=result
+        const {_id,name,price,productImage}=result
         const response={
             message:"Product created successfully",
-            product:{_id,name,price,request:{type:'GET',url:"http://localhost:5000/api/products/"+_id}}
+            product:{_id,name,price,productImage,request:{type:'GET',url:"http://localhost:5000/api/products/"+_id}}
         }
         res.status(201).json(response)
     } catch (error) {
@@ -49,7 +80,7 @@ router.post('/',async (req,res)=>{
 router.get('/:id',async (req,res)=>{
     const id=req.params.id;
     try {
-        const result =await Product.findById(id).select("_id name price");
+        const result =await Product.findById(id).select("_id name price productImage");
         if(result){
            // const {_id,name,price}=result;
             res.status(200).json(result);
@@ -64,7 +95,7 @@ router.get('/:id',async (req,res)=>{
     }
 })
 
-router.delete('/:id',async (req,res)=>{
+router.delete('/:id',auth,async (req,res)=>{
     const id=req.params.id;
     try {
         const result =await Product.findByIdAndDelete(id);
@@ -81,7 +112,7 @@ router.delete('/:id',async (req,res)=>{
     }
 })
 
-router.patch('/:id',async (req,res)=>{
+router.patch('/:id',auth,async (req,res)=>{
     const id=req.params.id;
     const fields=req.body;
     const updateOps={};

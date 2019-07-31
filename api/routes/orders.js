@@ -1,7 +1,8 @@
 const router=require('express').Router();
 const mongoose=require('mongoose');
 const Order=require('../models/order');
-const Product=require('../models/product')
+const Product=require('../models/product');
+const auth=require('../middlewares/auth');
 
 router.get('/',async (req,res)=>{
     try {
@@ -29,7 +30,7 @@ router.get('/',async (req,res)=>{
     
 });
 
-router.post('/',async (req,res)=>{
+router.post('/',auth,async (req,res)=>{
     
     const order=new Order({
         _id:new mongoose.Types.ObjectId(),
@@ -76,7 +77,7 @@ router.get('/:id',async (req,res)=>{
     }
 })
 
-router.delete('/:id',async (req,res)=>{
+router.delete('/:id',auth,async (req,res)=>{
     const id=req.params.id;
     try {
         const result=await Order.findByIdAndDelete(id).select("_id quantity product");

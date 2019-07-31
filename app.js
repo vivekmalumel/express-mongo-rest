@@ -2,10 +2,12 @@ const express=require('express');
 const app=express();
 const morgan=require('morgan');
 const mongoose=require('mongoose');
-const userRouter=require('./api/routes/user');
 const productRouter=require('./api/routes/products');
 const orderRouter=require('./api/routes/orders');
+const userRouter=require('./api/routes/user')
 require('dotenv').config();
+
+app.use('/uploads',express.static('public/uploads'));
 
 mongoose.connect(process.env.dbUrl,{useNewUrlParser:true})
 .then(()=>{
