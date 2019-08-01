@@ -2,8 +2,11 @@ const router=require('express').Router();
 const mongoose=require('mongoose');
 const Product=require('../models/product');
 const multer  = require('multer');
+const sharp = require('sharp');
 const auth=require('../middlewares/auth');
 require('dotenv').config();
+
+//Multer config for image upload
 const storage = multer.diskStorage({
     destination: function (req, file, cb) {
       cb(null, 'public/uploads')
@@ -13,11 +16,39 @@ const storage = multer.diskStorage({
     }
   })
 
+
 const fileFilter=(req,file,cb)=>{
     if(file.mimetype==='image/jpeg' || file.mimetype==='image/png')
         cb(null,true);
     else
         cb(null,false);
+}
+
+const generateThumb=(req,res,next)=>{
+    console.log("Woooowww");
+    let width=200;
+    let height=200;
+    sharp(req.file.path)
+    .resize(width,height,{
+        kernel: sharp.kernel.nearest,
+        fit:sharp.fit.cover }
+    )
+    .extend({
+        top: 5,
+        bottom: 5,
+        left: 5,
+        right: 5,
+        background: { r: 255, g: 255, b: 255, alpha: 1 }
+      })
+    .toFile(`public/uploads/thumbs/xs-${req.file.filename}`).then(info=>
+    {
+            console.log("sharp worked:",info)
+            next();
+    })
+    .catch(error=>{
+        res.status(500).json({error:"Thumbnail Creation Failed:"+error})
+    })
+    
 }
 
 const upload = multer({
@@ -53,7 +84,7 @@ router.get('/',async(req,res)=>{
     }
 });
 
-router.post('/',auth,upload.single('productImage'),async (req,res)=>{
+router.post('/',auth,upload.single('productImage'),generateThumb,async (req,res)=>{
     //console.log(req.file);
     const product=new Product({
         _id:new mongoose.Types.ObjectId(),
