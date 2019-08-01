@@ -7,6 +7,12 @@ const userSchema=mongoose.Schema({
         unique:true,
         match:/^([\w-\.]+@([\w-]+\.)+[\w-]{2,4})?$/
     },
-    password:{type:String,required:true}
+    password:{type:String,required:true},
+    tokens:[{
+        token:{
+            type:String,
+            required:true
+        }
+    }]
 })
 module.exports=mongoose.model('User',userSchema);
