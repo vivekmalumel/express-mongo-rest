@@ -96,7 +96,7 @@ router.post('/logout',auth,async(req,res)=>{
         res.status(500).json(error);
     }
 })
-router.get('/profile',async(req,res)=>{
+router.get('/profile',auth,async(req,res)=>{
     console.log(req.userData);
     res.status(200).json(req.userData);
 })
