@@ -1,4 +1,6 @@
-const express = require('express')
+const express = require('express');
+const multer = require('multer')
+const sharp = require('sharp')
 const router = express.Router();
 const mongoose=require('mongoose');
 const User=require('../models/user');
@@ -6,6 +8,7 @@ const bcrypt=require('bcrypt');
 const jwt=require('jsonwebtoken');
 require('dotenv').config();
 const auth=require('../middlewares/auth')
+const {sendWelcomeEmail,sendCancelEmail}=require('../email/account')
 
 router.post('/signup',async(req,res)=>{
     try {
@@ -26,6 +29,8 @@ router.post('/signup',async(req,res)=>{
                     password:hash,
                     tokens:[]
                 })
+                //Send Welcome Email
+                sendWelcomeEmail(user.email,'Test Name');
     
                  const result=user.save()
                  .then(result=>{
@@ -99,6 +104,63 @@ router.post('/logout',auth,async(req,res)=>{
 router.get('/profile',auth,async(req,res)=>{
     console.log(req.userData);
     res.status(200).json(req.userData);
+})
+
+const upload = multer({
+    limits: {
+        fileSize: 1000000
+    },
+    fileFilter(req, file, cb) {
+        if (!file.originalname.match(/\.(jpg|jpeg|png)$/)) {
+            return cb(new Error('Please upload an image'))
+        }
+
+        cb(undefined, true)
+    }
+})
+
+//Adding Profile Picture as buffer in DB
+router.post('/profile/avatar', auth, upload.single('avatar'), async (req, res) => {
+    const buffer = await sharp(req.file.buffer).resize({ width: 250, height: 250 }).png().toBuffer()
+    req.userData.avatar = buffer
+    await req.userData.save()
+    res.status(201).json({message:"Upload Success"})
+}, (error, req, res, next) => {
+    res.status(400).send({ error: error.message })
+})
+
+router.get('/:id/avatar', async (req, res) => {
+    try {
+        const user = await User.findById(req.params.id)
+
+        if (!user || !user.avatar) {
+            throw new Error()
+        }
+
+        res.set('Content-Type', 'image/png')
+        res.send(user.avatar)
+    } catch (e) {
+        res.status(404).json({error:"No avatar found!"})
+    }
+})
+
+
+router.delete('/profile',auth,async(req,res)=>{
+    try {
+        await req.userData.remove();
+        sendCancelEmail(req.userData.email,'Vivek');
+        res.json(req.userData);
+    } catch (error) {
+        res.status(500).send();
+    }
+})
+
+
+router.delete('/profile/avatar', auth, async (req, res) => {
+    console.log(req.userData);
+    req.userData.avatar = undefined;
+    await req.userData.save()
+    res.send()
 })
 
 module.exports=router;
